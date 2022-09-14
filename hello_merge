@@ -55,9 +55,7 @@ public class SlsOflnSlsSmtRecpRgstService extends AbstractBatchJob {
         slsOflnEtcSlsDsrpRgst(paramMap);
         
     }
-둘째는 ㅇㄴㄻㅇㄴㄹㅇㄴㅁㄹㅇㄴㄹㅇㄴㅁㄻㄴㅇㄹ여기를 고쳤지
-ㄴㅇㄹㄴㅁㄹㅇㄴㄹㄴㅇㄹㄴㅁㅇㄹㅇㄴㅁㄹㅇㄴㄹ
-
+결국 이렇게 고치는 것이제
     /**
      * @Method : slsOflnEtcSlsDsrpRgst
      * @Date : 2022. 08. 05.
