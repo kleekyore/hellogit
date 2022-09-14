@@ -55,7 +55,7 @@ public class SlsOflnSlsSmtRecpRgstService extends AbstractBatchJob {
         slsOflnEtcSlsDsrpRgst(paramMap);
         
     }
-결국 이렇게 고치는 것이제
+한번 싸웠으면 피를 봐야지!!!!!!!
     /**
      * @Method : slsOflnEtcSlsDsrpRgst
      * @Date : 2022. 08. 05.
