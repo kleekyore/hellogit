@@ -55,6 +55,7 @@ public class SlsOflnSlsSmtRecpRgstService extends AbstractBatchJob {
         slsOflnEtcSlsDsrpRgst(paramMap);
         
     }
+한번 싸웠으면 피를 봐야지!!!!!!!
 싫어 싫어 피보기 싫어 무서워!!!
     /**
      * @Method : slsOflnEtcSlsDsrpRgst
