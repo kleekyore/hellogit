@@ -1,0 +1,188 @@
+/***************************************************
+ * Copyright(c) 2021-2022 Kyobo Book Centre All right reserved.
+ * This software is the proprietary information of Kyobo Book.
+ *
+ * Revision History
+ * Author                         Date          Description
+ * --------------------------     ----------    ----------------------------------------
+ * krlee@kyobobook.com      2022. 8. 2.
+ *
+ ****************************************************/
+package kyobobook.application.biz.sls.service;
+
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import com.amazonaws.util.StringUtils;
+import kyobobook.application.adapter.out.persistence.sls.entity.SlsOflnSlsSmtRecpRgstEntity;
+import kyobobook.application.biz.sls.port.out.SlsOflnSlsSmtRecpRgstPersistencePort;
+import kyobobook.batch.AbstractBatchJob;
+import kyobobook.exception.BizRuntimeException;
+import kyobobook.util.DateUtils;
+import lombok.extern.slf4j.Slf4j;
+
+/**
+ * @Project     : java-batch-ord
+ * @FileName    : SlsOflnSlsSmtRecpRgstService.java
+ * @Date        : 2022. 8. 5.
+ * @author      : krlee@kyobobook.com
+ * @description : 오프라인 데이터 연동 (스마트영수증)
+ */
+@Slf4j
+@Service("SlsOflnSlsSmtRecpRgstJob")
+public class SlsOflnSlsSmtRecpRgstService extends AbstractBatchJob {
+
+    private final String PROGRAM_ID = "BT-BIZ06-06-007";
+
+    @Autowired
+    private SlsOflnSlsSmtRecpRgstPersistencePort slsOflnEtcSlsDsrpRgstPersistencePort;
+
+    @Override
+    public void process(String[] args) throws Exception {
+        
+        // 00. 파라미터 검증 
+        Map<String, String> paramMap = getParam(args);
+        
+        // 01. 업무 프로세스 수행
+        slsOflnEtcSlsDsrpRgst(paramMap);
+        
+    }
+
+    /**
+     * @Method : slsOflnEtcSlsDsrpRgst
+     * @Date : 2022. 08. 05.
+     * @author : krlee@kyobobook.com
+     * @description : 파라미터 가져오기
+     * @param Map<String, String>
+     * @return void
+     */
+    private void slsOflnEtcSlsDsrpRgst(Map<String, String> paramMap) {
+        
+        // 00. 매출조회 일자/시작시각/종료시각 파라미터 확인
+        String slsDate = paramMap.get("slsDate");                                                       // 매출일자
+        String brwsSttgHms = paramMap.get("brwsSttgHms");                                               // 조회시작시각
+        String brwsEndHms = paramMap.get("brwsEndHms");                                                 // 조회종료시각
+        String wrkSeparNum = paramMap.get("wrkSeparNum");                                               // 작업분리번호
+        String hndlrId = paramMap.get("hndlrId");                                                       // 처리자ID
+        
+        // 01. 스마트영수증 신청 회원번호 코드 가져오기
+        List<SlsOflnSlsSmtRecpRgstEntity> smtRecpAplnMmbrNumList = slsOflnEtcSlsDsrpRgstPersistencePort.selectSmtRecpAplnMmbrNum(paramMap);
+
+        // 02. 스마트영수증 신청 회원번호별 데이터 처리
+        for (SlsOflnSlsSmtRecpRgstEntity smtRecpAplnMmbrNum : smtRecpAplnMmbrNumList) {
+            // 02-01. 회원번호 처리
+            String mmbrNum = smtRecpAplnMmbrNum.getMmbrNum();
+            paramMap.put("mmbrNum", mmbrNum);
+            log.debug("{}회원 {}일 {}시 부터 {}시 까지 오프라인 스마트영수증 발급내역 등록 작업 시작(작업분리번호={}, 처리자ID={})", mmbrNum, slsDate, brwsSttgHms, brwsEndHms, (StringUtils.isNullOrEmpty(wrkSeparNum) ? "전체" : wrkSeparNum), hndlrId);
+            
+            // 02-02. 회원번호별 오프라인 스마트영수증 발급내역 데이터 조회(KFLOW API)
+            List<SlsOflnSlsSmtRecpRgstEntity> oflnSmtRecpList = slsOflnEtcSlsDsrpRgstPersistencePort.selectOflnSlsSmtRecp(paramMap);
+            
+            // 02-03. 회원번호별 데이터 INSERT
+            if(oflnSmtRecpList == null) {
+                log.debug("{}회원의 {}일 {}시 부터 {}시 까지의 오프라인 스마트영수증 발급내역이 존재하지 않습니다.(작업분리번호={})", mmbrNum, slsDate, brwsSttgHms, brwsEndHms, (StringUtils.isNullOrEmpty(wrkSeparNum) ? "전체" : wrkSeparNum));
+                continue;
+            }
+            Integer insertCount = slsOflnEtcSlsDsrpRgstPersistencePort.insertOflnSlsSmtRecpList(oflnSmtRecpList);
+            log.debug("{}회원의 {}일 {}시 부터 {}시 까지의 오프라인 스마트영수증 발급내역 {}건이 등록되었습니다.(작업분리번호={})", mmbrNum, slsDate, brwsSttgHms, brwsEndHms, insertCount, (StringUtils.isNullOrEmpty(wrkSeparNum) ? "전체" : wrkSeparNum));
+        }
+        
+    }
+
+    /**
+     * @Method : getParam
+     * @Date : 2022. 08. 05.
+     * @author : krlee@kyobobook.com
+     * @description : 파라미터 가져오기
+     * @param String[] args
+     * @return Map<String, String>
+     */
+    private Map<String, String> getParam(String[] args) {
+        
+        // 00. 변수 생성 및 초기화 ---------------------------------------------------------------------------------------
+        String hndlrId = PROGRAM_ID;                                                            // 처리자ID
+        
+        Map<String, String> paramMap = new HashMap<String, String>();
+        String slsDate = null;                                                                  // 매출일자
+        String brwsSttgHms = null;                                                              // 조회시작시각
+        String brwsEndHms = null;                                                               // 조회종료시각
+        String wrkSeparNum = null;                                                              // 작업분리번호
+
+        SimpleDateFormat dateFormatParser = new SimpleDateFormat("yyyyMMdd");
+
+        // 01. 매출일자 / 조회시작시각 / 조회종료시각 파리미터 생성 -----------------------------------------------------
+        Date prstDate = DateUtils.getCurrentDateTime();
+        Calendar cal = Calendar.getInstance();
+        cal.setTime(prstDate);
+        cal.add(Calendar.DATE, -1);
+        slsDate = dateFormatParser.format(cal.getTime());
+        
+        brwsSttgHms = "000000";
+        brwsEndHms = "235959";
+        
+        // 02. 추가 파라미터 확인
+        for(String param : args) {
+            // 작업분할번호 - WRK_SEPAR_NUM 회원번호의 끝자리가 일치하는 건만 작업
+            if(param.toUpperCase().contains("WRK_SEPAR_NUM=")) {
+                wrkSeparNum = param.split("=")[1].trim();
+            }
+            // 매출일자
+            if(param.toUpperCase().contains("SLS_DATE=")) {
+                slsDate = param.split("=")[1].trim();
+                isValidDate(slsDate);
+            }
+            // 처리자ID가 별도로 입력된 경우
+            if(param.toUpperCase().contains("HNDLR_ID=")) {
+                hndlrId = param.split("=")[1].trim();
+                log.info("처리자 ID : [{}]", hndlrId);
+            }
+        }
+        
+        // 02. 파라미터 MAP에 추가
+        paramMap.put("slsDate", slsDate);                                                       // 매출일자
+        paramMap.put("brwsSttgHms", brwsSttgHms);                                               // 조회시작시각
+        paramMap.put("brwsEndHms", brwsEndHms);                                                 // 조회종료시각
+        paramMap.put("wrkSeparNum", wrkSeparNum);                                               // 작업분리번호
+        paramMap.put("hndlrId", hndlrId);                                                       // 처리자ID
+        
+        log.debug("매출일자 / 판매조회 시작시각 / 판매조회 종료시각 / 작업분리번호 확인");
+        log.debug("시스템 현재시각   : {}", prstDate.toString());
+        log.debug("매출일자          : {}", slsDate);
+        log.debug("판매조회 시작시각 : {}", brwsSttgHms);
+        log.debug("판매조회 종료시각 : {}", brwsEndHms);
+        log.debug("작업분리번호      : {}", wrkSeparNum);
+        log.debug("처리자ID          : {}", hndlrId);
+        
+        return paramMap;
+        
+    }
+
+    /**
+     * @Method : isValidDate
+     * @Date : 2022. 08. 17.
+     * @author : krlee@kyobobook.com
+     * @description : 날짜 파라미터 확인
+     * @param String[] args
+     * @return Map<String, String>
+     */
+    private void isValidDate(String slsDate) {
+        
+        // 01. 매출일자 파리미터 확인
+        SimpleDateFormat dateFormatParser = new SimpleDateFormat("yyyyMMdd");
+        
+        // 02. 일자 정합성 확인
+        try {
+            dateFormatParser.setLenient(false);
+            dateFormatParser.parse(slsDate);
+        }catch(ParseException parseException) {
+            throw new BizRuntimeException("입력된 매출일자(yyyyMMdd) 파라미터의 확인이 필요합니다. " + slsDate, parseException);
+        }
+    }
+
+}
