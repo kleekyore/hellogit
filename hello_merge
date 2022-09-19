@@ -97,14 +97,8 @@ public class SlsOflnSlsSmtRecpRgstService extends AbstractBatchJob {
         }
         
     }
-머지하세 머지하세
-아름답게 머지하세
-MERGE EMGEERAWERAERA GEAGAEG
-ASDIFASDFN;LADF;LADF;LASHDFA;LIDF
-머지하세 머지하세
-아름답게 머지하세
-MERGE EMGEERAWERAERA GEAGAEG
-ASDIFASDFN;LADF;LADF;LASHDFA;LIDF
+
+
     /**
      * @Method : getParam
      * @Date : 2022. 08. 05.
