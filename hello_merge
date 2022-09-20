@@ -96,7 +96,7 @@ public class SlsOflnSlsSmtRecpRgstService extends AbstractBatchJob {
             log.debug("{}회원의 {}일 {}시 부터 {}시 까지의 오프라인 스마트영수증 발급내역 {}건이 등록되었습니다.(작업분리번호={})", mmbrNum, slsDate, brwsSttgHms, brwsEndHms, insertCount, (StringUtils.isNullOrEmpty(wrkSeparNum) ? "전체" : wrkSeparNum));
         }
         
-    }
+    }  
 
 dsfsadfsafsafsadfsafsadfasd싫어 싫어 없어지는 건 싫어
 dsfsadfsafsafsadfsafsadfasd싫어 싫어 없어지는 건 싫어
